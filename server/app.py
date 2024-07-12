@@ -30,6 +30,38 @@ def bakery_by_id(id):
     bakery_serialized = bakery.to_dict()
     return make_response ( bakery_serialized, 200  )
 
+
+@app.route('/bakeries/<int:id>', methods=['PATCH'])
+def update_bakery(id):
+    bakery = Bakery.query.filter_by(id=id).first()
+    if not bakery:
+        return make_response(jsonify({'error': 'Bakery not found'}), 404)
+
+    name = request.form.get('name')
+    if not name:
+        return make_response(jsonify({'error': 'Name not provided'}), 400)
+
+    bakery.name = name
+    db.session.commit()
+
+    bakery_serialized = bakery.to_dict()
+    return make_response(jsonify(bakery_serialized), 200)
+
+
+
+@app.route('/baked_goods/<int:id>', methods=['DELETE'])
+def delete_baked_good(id):
+    baked_good = BakedGood.query.filter_by(id=id).first()
+    if not baked_good:
+        return make_response(jsonify({'error': 'Baked good not found'}), 404)
+
+    db.session.delete(baked_good)
+    db.session.commit()
+
+    return make_response(jsonify({'message': 'Baked good successfully deleted'}), 200)
+
+
+
 @app.route('/baked_goods/by_price')
 def baked_goods_by_price():
     baked_goods_by_price = BakedGood.query.order_by(BakedGood.price.desc()).all()
@@ -43,7 +75,40 @@ def baked_goods_by_price():
 def most_expensive_baked_good():
     most_expensive = BakedGood.query.order_by(BakedGood.price.desc()).limit(1).first()
     most_expensive_serialized = most_expensive.to_dict()
-    return make_response( most_expensive_serialized,   200  )
+    return make_response( most_expensive_serialized, 200)
+
+
+
+@app.route('/baked_goods', methods=['POST'])
+def create_baked_good():
+    
+    name = request.form.get('name')
+    price = request.form.get('price')
+    bakery_id = request.form.get('bakery_id')
+
+    if not name or not price or not bakery_id:
+        return make_response(jsonify({'error': 'Missing data'}), 400)
+
+    try:
+        price = float(price)
+        bakery_id = int(bakery_id)
+    except ValueError:
+        return make_response(jsonify({'error': 'Invalid data format'}), 400)
+    
+    bakery = Bakery.query.filter_by(id=bakery_id).first()
+    if not bakery:
+        return make_response(jsonify({'error': 'Bakery not found'}), 404)
+
+    new_baked_good = BakedGood(name=name, price=price, bakery_id=bakery_id)
+    db.session.add(new_baked_good)
+    db.session.commit()
+
+    new_baked_good_serialized = new_baked_good.to_dict()
+    return make_response(jsonify(new_baked_good_serialized), 201)
+
+
+
+
 
 if __name__ == '__main__':
-    app.run(port=5555, debug=True)
+    app.run(port=5000, debug=True)
